@@ -30,8 +30,8 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/agendaTelefonica")
-public class AgendaController {
+@RequestMapping("/v2/agendaTelefonica")
+public class AgendaV2Controller {
 
     @Autowired
     private AgendaRepository agendaRepository;
@@ -119,6 +119,14 @@ public class AgendaController {
         agendaRepository.delete(contato.get());
 
         return ResponseEntity.ok(contato.get());
+    }
+
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @ExceptionHandler(NotFoundException.class)
+    public Map<String, String> handleNotFoundExceptions(NotFoundException ex) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("message", ex.getMessage());
+        return errors;
     }
 
 }
