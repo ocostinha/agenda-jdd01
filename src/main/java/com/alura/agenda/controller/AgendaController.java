@@ -1,5 +1,6 @@
 package com.alura.agenda.controller;
 
+import com.alura.agenda.exception.NotFoundException;
 import com.alura.agenda.model.Contato;
 import com.alura.agenda.repository.AgendaRepository;
 import jakarta.validation.Valid;
@@ -16,12 +17,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/agendaTelefonica")
@@ -32,9 +36,16 @@ public class AgendaController {
 
     @GetMapping("/{id}")
     public Contato consultarContato(@PathVariable Long id) {
-        Contato contato = agendaRepository.findById(id).get();
+        // return agendaRepository.findById(id).orElseThrow(() -> new NotFoundException("Contato não encontrado"));
+        // return agendaRepository.findById(id).orElseThrow(NotFoundException::new);
 
-        return contato;
+        Optional<Contato> contato = agendaRepository.findById(id);
+
+        if (contato.isEmpty()) {
+            throw new NotFoundException("Contato não encontrado");
+        }
+
+        return contato.get();
     }
 
     @GetMapping
@@ -55,25 +66,45 @@ public class AgendaController {
     }
 
     @PutMapping("/{id}")
-    public String atualizarContato() {
-        return "Atualizar Contato";
+    public Contato atualizarContato(@RequestBody @Valid Contato contato, @PathVariable Long id) {
+        contato.setId(id);
+
+        Contato contatoAtualizado = agendaRepository.save(contato);
+
+        return contatoAtualizado;
     }
 
     @PatchMapping("/{id}")
-    public String atualizarParcialmenteContato() {
-        return "Atualizar parcialmente Contato";
+    public Contato atualizarParcialmenteContato(@PathVariable Long id,
+                                                @RequestParam("email") String email) {
+        Contato contato = agendaRepository.findById(id).get();
+
+        contato.setEmail(email);
+
+        Contato contatoAtualizado = agendaRepository.save(contato);
+
+        return contatoAtualizado;
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public String deletarContato() {
-        return "Deletar Contato";
+    public Contato deletarContato(@PathVariable Long id) {
+        // Abordagem completa
+
+        Contato contato = agendaRepository.findById(id).get();
+
+        agendaRepository.delete(contato);
+
+        return contato;
+
+        // Abordagem simple
+
+        // agendaRepository.deleteById(id);
     }
 
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> handleValidationExceptions(
-        MethodArgumentNotValidException ex) {
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
@@ -82,4 +113,21 @@ public class AgendaController {
         });
         return errors;
     }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NotFoundException.class)
+    public Map<String, String> handleNotFoundExceptions(NotFoundException ex) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("message", ex.getMessage());
+        return errors;
+    }
+
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(NoSuchElementException.class)
+    public Map<String, String> handleNotFoundExceptions(NoSuchElementException ex) {
+        Map<String, String> errors = new HashMap<>();
+        errors.put("message", "Contato não encontrado");
+        return errors;
+    }
+
 }
