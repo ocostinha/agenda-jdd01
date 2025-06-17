@@ -75,6 +75,12 @@ public class AgendaV2Controller {
     public Contato atualizarContato(@RequestBody @Valid Contato contato, @PathVariable Long id) {
         contato.setId(id);
 
+        Optional<Contato> contatoExistente = agendaRepository.findByEmail(contato.getEmail());
+
+        if (contatoExistente.isPresent() && !contatoExistente.get().getId().equals(id)) {
+            throw new BusinessException("Email já cadastrado");
+        }
+
         Contato contatoAtualizado = agendaRepository.save(contato);
 
         return contatoAtualizado;
@@ -84,6 +90,12 @@ public class AgendaV2Controller {
     public Contato atualizarParcialmenteContato(@PathVariable Long id,
                                                 @RequestParam("email") String email) {
         Contato contato = agendaRepository.findById(id).get();
+
+        Optional<Contato> contatoExistente = agendaRepository.findByEmail(email);
+
+        if (contatoExistente.isPresent() && !contatoExistente.get().getId().equals(id)) {
+            throw new BusinessException("Email já cadastrado");
+        }
 
         contato.setEmail(email);
 
@@ -119,14 +131,6 @@ public class AgendaV2Controller {
         agendaRepository.delete(contato.get());
 
         return ResponseEntity.ok(contato.get());
-    }
-
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @ExceptionHandler(NotFoundException.class)
-    public Map<String, String> handleNotFoundExceptions(NotFoundException ex) {
-        Map<String, String> errors = new HashMap<>();
-        errors.put("message", ex.getMessage());
-        return errors;
     }
 
 }
